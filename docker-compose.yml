@@ -1,0 +1,7 @@
+services:
+  bead-bench:
+    build: .
+    container_name: bead-bench
+    ports:
+      - "8080:80"
+    restart: unless-stopped
