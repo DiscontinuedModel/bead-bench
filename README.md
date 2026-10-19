@@ -7,7 +7,7 @@ A bead pattern designer for bracelets, in a single HTML page.
 - **Colors:** 74 named bead colors, a color picker, recent colors, and a palette and pattern generator (ombré, stripes, chevron, diamonds and more)
 - **Picture to pattern** in 8, 16 or 32 colors
 - **Counts and charts:** bead counts with grams, and a row-by-row chart with checkmarks
-- **Extras:** light and dark themes, and a guided tour in Arabic
+- **Extras:** light and dark themes, and a guided tour in English with an Arabic option
 
 Patterns are saved in the browser's local storage, so each device keeps its own.
 

@@ -184,13 +184,16 @@ select,input[type=number],input[type=text]{width:100%;background:var(--bg);borde
 .t-spot{position:fixed;border-radius:12px;box-shadow:0 0 0 9999px rgba(12,9,22,.62);outline:2px solid var(--accent);outline-offset:2px;pointer-events:none}
 .t-bub{position:fixed;width:min(350px, calc(100vw - 24px));background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.35);font-family:var(--arabic)}
 .t-bub p{margin:4px 0 14px;font-size:1.02rem;line-height:1.8}
+.t-bub[dir=ltr] p{font-size:.98rem;line-height:1.55}
 .t-step{font-size:.78rem;color:var(--accent);font-weight:600}
 .t-arrow{position:absolute;width:16px;height:16px;background:var(--panel);border:1px solid var(--line);transform:rotate(45deg)}
 .t-arrow.up{top:-9px;border-right:0;border-bottom:0}
 .t-arrow.down{bottom:-9px;border-left:0;border-top:0}
 .t-btns{display:flex;gap:8px;align-items:center}
-.t-btns .btn{font-family:var(--arabic)}
-.t-skip{margin-inline-start:auto;background:none;border:0;color:var(--muted);text-decoration:underline;font-family:var(--arabic);font-size:.85rem;padding:4px}
+.t-btns .btn,.t-skip{font-family:inherit}
+.t-skip{margin-inline-start:auto;background:none;border:0;color:var(--muted);text-decoration:underline;font-size:.85rem;padding:4px}
+#tLang{font-family:var(--arabic)}
+#tLang:lang(en){font-family:var(--body)}
 @media (prefers-reduced-motion:no-preference){.t-spot,.t-bub{transition:top .25s ease,left .25s ease,width .25s ease,height .25s ease}}
 .stitches{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
 .stitches .label{grid-column:1/-1;margin-top:2px}
@@ -233,7 +236,7 @@ select,input[type=number],input[type=text]{width:100%;background:var(--bg);borde
   <input id="name" type="text" aria-label="Pattern name">
   <div class="hbtns">
     <button class="btn" id="bTheme" title="Switch between light and dark">Auto</button>
-    <button class="btn" id="bTour" lang="ar" style="font-family:var(--arabic)">جولة تعليمية</button>
+    <button class="btn" id="bTour">Tour</button>
     <button class="btn" id="bLib">My patterns</button>
     <button class="btn" id="bImg">Picture to pattern</button>
     <button class="btn" id="bGen">Generate</button>
@@ -432,11 +435,11 @@ select,input[type=number],input[type=text]{width:100%;background:var(--bg);borde
 <div id="tour" hidden>
   <div class="t-catch"></div>
   <div class="t-spot" id="tSpot"></div>
-  <div class="t-bub" id="tBub" dir="rtl" lang="ar" role="dialog" aria-live="polite" aria-label="جولة تعليمية">
+  <div class="t-bub" id="tBub" dir="ltr" lang="en" role="dialog" aria-live="polite" aria-label="Guided tour">
     <i class="t-arrow" id="tArrow"></i>
     <div class="t-step" id="tStep"></div>
     <p id="tText"></p>
-    <div class="t-btns"><button class="btn primary" id="tNext">التالي</button><button class="btn" id="tPrev">السابق</button><button class="t-skip" id="tSkip">إنهاء الجولة</button></div>
+    <div class="t-btns"><button class="btn" id="tPrev">Back</button><button class="btn primary" id="tNext">Next</button><button class="t-skip" id="tSkip">End tour</button><button class="t-skip" id="tLang" lang="ar" style="margin-inline-start:0">عربي</button></div>
   </div>
 </div>
 
@@ -1505,39 +1508,49 @@ fitZoom(); setTool('draw'); all();
 /* ---------- guided tour (Arabic) ---------- */
 const panelOf = sel => () => $(sel).closest('.panel');
 const TOUR = [
-  ['.brand', 'أهلًا بكِ في Bead Bench! هذه جولة قصيرة تعرّفكِ على كل جزء في التطبيق. اضغطي «التالي» للمتابعة.'],
-  ['#name', 'هنا اسم النمط. المسيه واكتبي اسمًا جديدًا متى أردتِ.'],
-  ['#stitch', 'اختاري نوع الغرزة. للأساور المسطحة: Loom للنول، و Grid للشبكة، و Peyote للبيوتي. وللأساور الملفوفة: Tubular peyote للبيوتي الأنبوبي، و Bead crochet لحبل الكروشيه بالخرز. التطبيق يرتّب الخرز ويكتب المخطط حسب اختياركِ.'],
-  ['#size', 'اختاري نوع الخرز ومقاسه، مثل Delica 11/0. الخرز يُرسم بشكله الحقيقي، والمقاسات تُحسب على أساسه.'],
-  [()=>$('#cols').closest('.row2'), 'Width هو عدد الخرز في العرض، و Length هو عدد الصفوف في الطول.'],
-  [()=>$('#bFit').closest('.field'), 'تعرفين الطول الذي تريدينه؟ اكتبيه بالإنش ثم اضغطي Set rows، فيحسب عدد الصفوف تلقائيًا. تحتها يظهر المقاس النهائي وعدد الخرز.'],
-  ['.colorbar', 'هذه ألوانكِ. المسي لونًا لترسمي به. اضغطي على اللون مطولًا لتغييره أو تسميته أو حذفه. زر + يضيف لونًا جديدًا، وصف Recent فيه آخر الألوان التي استخدمتِها.'],
-  ['#tools', 'أدوات الرسم: Draw للتلوين، و Fill لتعبئة مساحة كاملة، و Pick color لأخذ لون خرزة، و Erase لإزالة خرزة، و Scroll للتحرك في النمط بدون تلوين.'],
-  [()=>$('#mx').parentElement, 'المرآة: شغّلي Mirror ↔ وارسمي نصف السوار فقط، فيتكرر الرسم على الجهة الأخرى تلقائيًا.'],
-  [()=>$('#undo').parentElement, 'Undo يتراجع عن آخر خطوة. − و + للتصغير والتكبير. Letters يكتب حرف اللون على كل خرزة. Clear يمسح النمط كله (اضغطي مرتين للتأكيد).'],
-  ['#stage', 'هنا النمط. المسي الخرز أو اسحبي إصبعكِ عليه لتلوينه. الأرقام على الجانب هي أرقام الصفوف.'],
-  ['.map', 'خريطة الخرز تعرض السوار كاملًا. المربع الأبيض هو الجزء الظاهر أمامكِ. المسي الخريطة للانتقال إلى أي مكان.'],
-  ['#rollPanel', 'في الأساور الملفوفة يظهر هنا شكل السوار وهو ملفوف كأنبوب. اسحبيه بإصبعكِ لتدويره، أو اضغطي Spin ليدور وحده. الخطان المتقطعان على جانبي النمط يلتقيان حول الأنبوب.'],
-  [panelOf('#counts'), 'هنا عدد الخرز من كل لون، ووزنه التقريبي بالغرام مع زيادة احتياطية. مفيد قبل الشراء.'],
-  [panelOf('#chart'), 'المخطط صفًا بصف. مثلًا 3A تعني ثلاث خرزات من اللون A. المسي الصف عندما تنتهين منه ليُشطب، والصف التالي يظهر مميّزًا.'],
-  ['#bImg', 'حوّلي أي صورة إلى نمط خرز. اختاري عدد الألوان 8 أو 16 أو 32، وشاهدي المعاينة قبل استخدامها.'],
-  ['#bGen', 'مولّد الأنماط والألوان: اختاري مجموعة ألوان متناسقة وتصميمًا مثل التدرج أو الخطوط أو المعينات أو الشيفرون، وشاهدي المعاينة. زر Surprise me يقترح تصميمًا جديدًا في كل مرة.'],
-  ['#bLib', 'كل أنماطكِ هنا: افتحي نمطًا، أو ابدئي نمطًا جديدًا، أو اعملي نسخة. كل شيء يُحفظ تلقائيًا على هذا الجهاز.'],
-  ['#bShot', 'يصنع صورة للمخطط مع قائمة الألوان. اضغطي على الصورة مطولًا لحفظها أو إرسالها أو طباعتها.'],
-  ['#bTour', 'انتهت الجولة! اضغطي هنا متى أردتِ مشاهدتها مرة أخرى. استمتعي بالتصميم.']
+  ['.brand', 'أهلًا بكِ في Bead Bench! هذه جولة قصيرة تعرّفكِ على كل جزء في التطبيق. اضغطي «التالي» للمتابعة.', "Welcome to Bead Bench! This short tour shows you each part of the app. Tap Next to keep going."],
+  ['#name', 'هنا اسم النمط. المسيه واكتبي اسمًا جديدًا متى أردتِ.', "This is your pattern’s name. Tap it to rename the pattern any time."],
+  ['#stitch', 'اختاري نوع الغرزة. للأساور المسطحة: Loom للنول، و Grid للشبكة، و Peyote للبيوتي. وللأساور الملفوفة: Tubular peyote للبيوتي الأنبوبي، و Bead crochet لحبل الكروشيه بالخرز. التطبيق يرتّب الخرز ويكتب المخطط حسب اختياركِ.', "Pick a stitch. Flat bracelets: Loom, Grid (square stitch) or Peyote. Rolled bracelets: Tubular peyote or Bead crochet. The layout and the row chart follow your choice."],
+  ['#size', 'اختاري نوع الخرز ومقاسه، مثل Delica 11/0. الخرز يُرسم بشكله الحقيقي، والمقاسات تُحسب على أساسه.', "Pick your bead type and size, like Delica 11/0. Beads are drawn at their real shape, and all sizes are worked out from it."],
+  [()=>$('#cols').closest('.row2'), 'Width هو عدد الخرز في العرض، و Length هو عدد الصفوف في الطول.', "Width is how many beads across. Length is how many rows long."],
+  [()=>$('#bFit').closest('.field'), 'تعرفين الطول الذي تريدينه؟ اكتبيه بالإنش ثم اضغطي Set rows، فيحسب عدد الصفوف تلقائيًا. تحتها يظهر المقاس النهائي وعدد الخرز.', "Know the length you want? Type it in inches and tap Set rows to get the right number of rows. The finished size and bead total show below."],
+  ['.colorbar', 'هذه ألوانكِ. المسي لونًا لترسمي به. اضغطي على اللون مطولًا لتغييره أو تسميته أو حذفه. زر + يضيف لونًا جديدًا، وصف Recent فيه آخر الألوان التي استخدمتِها.', "These are your colors. Tap one to bead with it. Press and hold a color to change, rename or remove it. + adds a color, and Recent holds the colors you used last."],
+  ['#tools', 'أدوات الرسم: Draw للتلوين، و Fill لتعبئة مساحة كاملة، و Pick color لأخذ لون خرزة، و Erase لإزالة خرزة، و Scroll للتحرك في النمط بدون تلوين.', "Drawing tools: Draw colors beads, Fill colors a whole area, Pick color copies a bead’s color, Erase removes a bead, and Scroll moves around without drawing."],
+  [()=>$('#mx').parentElement, 'المرآة: شغّلي Mirror ↔ وارسمي نصف السوار فقط، فيتكرر الرسم على الجهة الأخرى تلقائيًا.', "Mirror: turn on Mirror ↔ and draw just half the bracelet. The other side copies itself."],
+  [()=>$('#undo').parentElement, 'Undo يتراجع عن آخر خطوة. − و + للتصغير والتكبير. Letters يكتب حرف اللون على كل خرزة. Clear يمسح النمط كله (اضغطي مرتين للتأكيد).', "Undo takes back your last step. − and + zoom. Letters puts each color’s letter on the beads. Clear empties the whole pattern (tap twice to confirm)."],
+  ['#stage', 'هنا النمط. المسي الخرز أو اسحبي إصبعكِ عليه لتلوينه. الأرقام على الجانب هي أرقام الصفوف.', "This is your pattern. Tap a bead or drag across beads to color them. The numbers down the side are row numbers."],
+  ['.map', 'خريطة الخرز تعرض السوار كاملًا. المربع الأبيض هو الجزء الظاهر أمامكِ. المسي الخريطة للانتقال إلى أي مكان.', "The bead map shows the whole bracelet. The white box is the part on screen. Tap the map to jump anywhere."],
+  ['#rollPanel', 'في الأساور الملفوفة يظهر هنا شكل السوار وهو ملفوف كأنبوب. اسحبيه بإصبعكِ لتدويره، أو اضغطي Spin ليدور وحده. الخطان المتقطعان على جانبي النمط يلتقيان حول الأنبوب.', "For rolled bracelets, this shows the bracelet rolled into a tube. Drag to turn it, tap Spin to rotate it, and zoom with − and +. The dashed lines on the pattern meet around the tube."],
+  [panelOf('#counts'), 'هنا عدد الخرز من كل لون، ووزنه التقريبي بالغرام مع زيادة احتياطية. مفيد قبل الشراء.', "Bead count shows how many beads of each color you need, with grams and a little extra. Handy before you shop."],
+  [panelOf('#chart'), 'المخطط صفًا بصف. مثلًا 3A تعني ثلاث خرزات من اللون A. المسي الصف عندما تنتهين منه ليُشطب، والصف التالي يظهر مميّزًا.', "The row-by-row chart. 3A means three beads of color A. Tap a row when it’s done to check it off. The next row is highlighted."],
+  ['#bImg', 'حوّلي أي صورة إلى نمط خرز. اختاري عدد الألوان 8 أو 16 أو 32، وشاهدي المعاينة قبل استخدامها.', "Turn any picture into a bead pattern. Pick 8, 16 or 32 colors and check the preview before you use it."],
+  ['#bGen', 'مولّد الأنماط والألوان: اختاري مجموعة ألوان متناسقة وتصميمًا مثل التدرج أو الخطوط أو المعينات أو الشيفرون، وشاهدي المعاينة. زر Surprise me يقترح تصميمًا جديدًا في كل مرة.', "The generator makes matching color palettes and designs like ombré, stripes, diamonds and chevrons. Surprise me suggests something new each time."],
+  ['#bLib', 'كل أنماطكِ هنا: افتحي نمطًا، أو ابدئي نمطًا جديدًا، أو اعملي نسخة. كل شيء يُحفظ تلقائيًا على هذا الجهاز.', "All your patterns live here: open one, start a new one or make a copy. Everything saves on this device automatically."],
+  ['#bShot', 'يصنع صورة للمخطط مع قائمة الألوان. اضغطي على الصورة مطولًا لحفظها أو إرسالها أو طباعتها.', "Makes a picture of your chart with a color key. Press and hold the picture to save, share or print it."],
+  ['#bTour', 'انتهت الجولة! اضغطي هنا متى أردتِ مشاهدتها مرة أخرى. استمتعي بالتصميم.', "That’s the tour! Tap here any time to see it again. Happy beading."]
 ];
 let tIdx = -1, tRaf = 0;
-const arNum = n => n.toLocaleString('ar-EG');
+let tLang='en'; try{ tLang=localStorage.getItem('beadbench.tourLang')||'en'; }catch(e){}
+const TUI={en:{step:(a,b)=>`${a} of ${b}`, next:'Next', done:'Done', back:'Back', end:'End tour', other:'عربي', label:'Guided tour', btn:'Tour'},
+           ar:{step:(a,b)=>`${a.toLocaleString('ar-EG')} من ${b.toLocaleString('ar-EG')}`, next:'التالي', done:'تم', back:'السابق', end:'إنهاء الجولة', other:'English', label:'جولة تعليمية', btn:'جولة تعليمية'}};
+function tApplyLang(){
+  const ar=tLang==='ar', u=TUI[tLang], bub=$('#tBub');
+  bub.dir=ar?'rtl':'ltr'; bub.lang=tLang; bub.setAttribute('aria-label',u.label);
+  bub.style.fontFamily = ar ? 'var(--arabic)' : 'var(--body)';
+  $('#tPrev').textContent=u.back; $('#tSkip').textContent=u.end; $('#tLang').textContent=u.other;
+  $('#tLang').lang = ar ? 'en' : 'ar';
+}
 function tEl(){ const t = TOUR[tIdx][0]; return typeof t==='function' ? t() : $(t); }
 function tStart(){ document.querySelectorAll('.ov').forEach(o=>o.hidden=true); tIdx=0; $('#tour').hidden=false; tShow(); }
 function tEnd(){ $('#tour').hidden=true; tIdx=-1; try{ localStorage.setItem('beadbench.tour','1'); }catch(e){} }
 function tShow(){
   let el = tEl(); const fp = el && el.closest('.panel.collapsed'); if(fp && !el.closest('#rollPanel[hidden]')){ fp._open(); }
   if(!el || el.closest('[hidden]')){ return tIdx < TOUR.length-1 ? (tIdx++, tShow()) : tEnd(); }
-  $('#tStep').textContent = `${arNum(tIdx+1)} من ${arNum(TOUR.length)}`;
-  $('#tText').textContent = TOUR[tIdx][1];
+  tApplyLang(); const u=TUI[tLang];
+  $('#tStep').textContent = u.step(tIdx+1, TOUR.length);
+  $('#tText').textContent = TOUR[tIdx][tLang==='ar'?1:2];
   $('#tPrev').hidden = tIdx===0;
-  $('#tNext').textContent = tIdx===TOUR.length-1 ? 'تم' : 'التالي';
+  $('#tNext').textContent = tIdx===TOUR.length-1 ? u.done : u.next;
   $('#tSkip').hidden = tIdx===TOUR.length-1;
   const r = el.getBoundingClientRect();
   if(r.top < 60 || r.bottom > innerHeight - 60) el.scrollIntoView({block: r.height > innerHeight*0.6 ? 'start' : 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
@@ -1565,13 +1578,14 @@ $('#tNext').onclick = ()=>{ if(tIdx >= TOUR.length-1) return tEnd(); tIdx++; tSh
 $('#tPrev').onclick = ()=>{ let i=tIdx-1; while(i>0){ const t=TOUR[i][0], e=typeof t==='function'?t():$(t); if(e && !e.closest('[hidden]')) break; i--; } if(i>=0){ tIdx=i; tShow(); } };
 $('#tSkip').onclick = tEnd;
 $('#bTour').onclick = tStart;
+$('#tLang').onclick = ()=>{ tLang = tLang==='ar' ? 'en' : 'ar'; try{ localStorage.setItem('beadbench.tourLang',tLang); }catch(e){} tShow(); };
 const tRe = ()=>{ if(tIdx>=0){ cancelAnimationFrame(tRaf); tRaf = requestAnimationFrame(tPlace); } };
 addEventListener('scroll', tRe, true); addEventListener('resize', tRe);
 document.addEventListener('keydown', e=>{
   if(tIdx<0) return;
   if(e.key==='Escape'){ e.stopPropagation(); tEnd(); }
-  else if(e.key==='ArrowLeft'){ $('#tNext').click(); }
-  else if(e.key==='ArrowRight'){ $('#tPrev').click(); }
+  else if(e.key==='ArrowRight'){ (tLang==='ar' ? $('#tPrev') : $('#tNext')).click(); }
+  else if(e.key==='ArrowLeft'){ (tLang==='ar' ? $('#tNext') : $('#tPrev')).click(); }
 }, true);
 let tourSeen = false; try{ tourSeen = localStorage.getItem('beadbench.tour')==='1'; }catch(e){ tourSeen = true; }
 if(!tourSeen) setTimeout(tStart, 700);
