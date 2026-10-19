@@ -371,16 +371,16 @@ label.btn{display:inline-flex;align-items:center;cursor:pointer}
   <div class="libio">
     <span class="label">Back up or move patterns</span>
     <div class="btnrow">
-      <button class="btn small" id="bExpOne">Save this pattern to a file</button>
-      <button class="btn small" id="bExpAll">Save all patterns</button>
-      <label class="btn small" for="impFile" tabindex="0" id="impLabel">Open a pattern file</label><input type="file" id="impFile" accept=".json,application/json" hidden>
+      <button class="btn small" id="bExpOne">Save this pattern as a picture</button>
+      <button class="btn small" id="bExpAll">Back up all patterns</button>
+      <label class="btn small" for="impFile" tabindex="0" id="impLabel">Open a saved pattern</label><input type="file" id="impFile" accept=".png,.json,image/png,application/json" hidden>
     </div>
     <details id="ioMore"><summary>File didn’t download? Copy and paste instead</summary>
       <textarea id="ioText" rows="4" spellcheck="false" placeholder="Paste a pattern code here, then tap Load"></textarea>
       <div class="btnrow"><button class="btn small" id="bCopyAll">Copy all patterns</button><button class="btn small" id="bPasteLoad">Load pasted code</button></div>
     </details>
   </div>
-  <p class="note">Patterns are saved in this browser on this device. Save them to a file to back them up or open them on another device.</p>
+  <p class="note">Patterns are saved in this browser on this device. A pattern picture shows the chart and colors, so you can view, print or text it like any photo, and it opens back into Bead Bench. The backup keeps every pattern in one file.</p>
 </div></div>
 
 <div class="ov" id="ovImg" hidden><div class="panel">
@@ -445,9 +445,9 @@ label.btn{display:inline-flex;align-items:center;cursor:pointer}
 
 <div class="ov" id="ovShot" hidden><div class="panel" style="width:min(900px,100%)">
   <h2>Pattern picture</h2>
-  <p class="note" style="margin-top:0">Press and hold the picture (or right-click it) to save or share it.</p>
+  <p class="note" style="margin-top:0">This picture shows the chart and colors, and it also opens back into Bead Bench. Use <b>My patterns → Open a saved pattern</b> on any device. You can also press and hold the picture (or right-click it) to save or share it.</p>
   <div style="overflow:auto;max-height:70vh;margin-top:10px"><img id="shot" alt="Bead pattern chart"></div>
-  <div class="close-row"><button class="btn" data-close>Close</button></div>
+  <div class="close-row"><button class="btn primary" id="bShotSave">Save picture</button><button class="btn" data-close>Close</button></div>
 </div></div>
 
 <div id="tour" hidden>
@@ -1097,7 +1097,7 @@ $('#bCopy').onclick=()=>{
 };
 
 /* ---------- picture export ---------- */
-$('#bShot').onclick=()=>{
+function chartCanvas(){
   const s=sz(), W=Math.max(12, Math.min(22, Math.round(560/S.cols))), H=W*s.h/s.w;
   const g0=36, pad=28, pw=gridW(S.cols)*W, ph=gridH(S.rows)*H, legW=260, headH=74;
   const n=counts(), used=S.palette.map((p,i)=>i).filter(i=>n[i]);
@@ -1119,12 +1119,44 @@ $('#bShot').onclick=()=>{
   g.fillStyle='#1e1a2c'; g.font='600 13px "Figtree", sans-serif'; g.textBaseline='alphabetic'; g.fillText('Colors', lx, oy+12);
   used.forEach((i,k)=>{
     const y=oy+26+k*28; drawBead(g,lx,y,18,22,S.palette[i].hex,LET[i]);
-    g.fillStyle='#1e1a2c'; g.font='13px "Figtree", sans-serif'; g.textBaseline='middle';
+    g.fillStyle='#1e1a2c'; g.font='13px "Figtree", sans-serif'; g.textBaseline='middle'; g.textAlign='left';
     g.fillText(`${S.palette[i].name}`, lx+28, y+11);
     g.fillStyle='#686280'; g.font='12px "IBM Plex Mono", monospace'; g.textAlign='right'; g.fillText(n[i], lx+legW, y+11); g.textAlign='left';
   });
-  $('#shot').src=cvs.toDataURL('image/png'); show('#ovShot');
+  return cvs;
+}
+/* PNG with the pattern tucked inside (a tEXt chunk), so the picture opens back into Bead Bench */
+const CRC_T=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(b){ let c=0xFFFFFFFF; for(let i=0;i<b.length;i++) c=CRC_T[(c^b[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+const toB64 = str => { const u=new TextEncoder().encode(str); let s=''; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); return btoa(s); };
+const fromB64 = b => new TextDecoder().decode(Uint8Array.from(atob(b), ch=>ch.charCodeAt(0)));
+async function patternPng(){
+  const cvs=chartCanvas();
+  const blob=await new Promise(r=>cvs.toBlob(r,'image/png')), png=new Uint8Array(await blob.arrayBuffer());
+  const enc=new TextEncoder(), type=enc.encode('tEXt'), data=enc.encode('bead-bench\0'+toB64(bundle([S])));
+  const chunk=new Uint8Array(12+data.length), dv=new DataView(chunk.buffer);
+  dv.setUint32(0,data.length); chunk.set(type,4); chunk.set(data,8);
+  const crcIn=new Uint8Array(4+data.length); crcIn.set(type); crcIn.set(data,4); dv.setUint32(8+data.length, crc32(crcIn));
+  const out=new Uint8Array(png.length+chunk.length); out.set(png.subarray(0,33)); out.set(chunk,33); out.set(png.subarray(33),33+chunk.length);
+  return new Blob([out],{type:'image/png'});
+}
+function patternFromPng(buf){
+  const u=new Uint8Array(buf); if(u[0]!==0x89||u[1]!==0x50||u[2]!==0x4E||u[3]!==0x47) return null;
+  const dv=new DataView(u.buffer); let p=8;
+  while(p+12<=u.length){
+    const len=dv.getUint32(p), type=String.fromCharCode(u[p+4],u[p+5],u[p+6],u[p+7]);
+    if(type==='tEXt'){ const d=new TextDecoder('latin1').decode(u.subarray(p+8,p+8+len)), i=d.indexOf('\0');
+      if(d.slice(0,i)==='bead-bench'){ try{ return fromB64(d.slice(i+1)); }catch(e){ return null; } } }
+    if(type==='IEND') break; p+=12+len;
+  }
+  return null;
+}
+let shotBlob=null;
+$('#bShot').onclick=async()=>{
+  shotBlob=await patternPng();
+  const fr=new FileReader(); fr.onload=()=>{ $('#shot').src=fr.result; show('#ovShot'); }; fr.readAsDataURL(shotBlob);
 };
+$('#bShotSave').onclick=()=>{ if(shotBlob) download(`${slug(S.name)}.png`, shotBlob); };
 
 /* ---------- picture to pattern ---------- */
 let srcImg=null, imgK=16, quant=null, qTimer=0;
@@ -1507,7 +1539,7 @@ async function download(name, text){
     $('#ioMore').open=true; toast('Saving files isn’t available here. Use copy and paste below.'); return;
   }
   try{
-    const url=URL.createObjectURL(new Blob([text],{type:'application/json'}));
+    const url=URL.createObjectURL(text instanceof Blob ? text : new Blob([text],{type:'application/json'}));
     const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),5000);
     toast(`Saved ${name}. No file? Use copy and paste below.`);
@@ -1529,10 +1561,17 @@ function importText(t){
   ok.forEach(d=>lib.designs[d.id]=d); openDesign(ok[0].id); hide('#ovLib');
   toast(`Opened ${ok.length} pattern${ok.length>1?'s':''}. ${ok.length>1?'Find the rest in My patterns.':''}`); return true;
 }
-$('#bExpOne').onclick=()=>download(`${slug(S.name)}.beads.json`, bundle([S]));
-$('#bExpAll').onclick=()=>download(`bead-bench-patterns-${new Date().toISOString().slice(0,10)}.json`, bundle(Object.values(lib.designs)));
+$('#bExpOne').onclick=async()=>download(`${slug(S.name)}.png`, await patternPng());
+$('#bExpAll').onclick=()=>download(`bead-bench-backup-${new Date().toISOString().slice(0,10)}.json`, bundle(Object.values(lib.designs)));
 $('#impLabel').addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); $('#impFile').click(); } });
-$('#impFile').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const fr=new FileReader(); fr.onload=()=>{ importText(fr.result); e.target.value=''; }; fr.readAsText(f); };
+$('#impFile').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return; const fr=new FileReader();
+  if(/png$/i.test(f.type) || /\.png$/i.test(f.name)){
+    fr.onload=()=>{ const t=patternFromPng(fr.result); e.target.value='';
+      if(t) importText(t); else toast('That picture wasn’t saved from Bead Bench. To turn a photo into a pattern, use Picture to pattern.'); };
+    fr.readAsArrayBuffer(f);
+  } else { fr.onload=()=>{ importText(fr.result); e.target.value=''; }; fr.readAsText(f); }
+};
 $('#bCopyAll').onclick=()=>{
   const t=bundle(Object.values(lib.designs)); $('#ioText').value=t;
   navigator.clipboard.writeText(t).then(()=>toast('All patterns copied. Paste them somewhere safe, like a note or email.'))
@@ -1592,7 +1631,7 @@ const TOUR = [
   ['#bImg', 'حوّلي أي صورة إلى نمط خرز. اختاري عدد الألوان 8 أو 16 أو 32، وشاهدي المعاينة قبل استخدامها.', "Turn any picture into a bead pattern. Pick 8, 16 or 32 colors and check the preview before you use it."],
   ['#bGen', 'مولّد الأنماط والألوان: اختاري مجموعة ألوان متناسقة وتصميمًا مثل التدرج أو الخطوط أو المعينات أو الشيفرون، وشاهدي المعاينة. زر Surprise me يقترح تصميمًا جديدًا في كل مرة.', "The generator makes matching color palettes and designs like ombré, stripes, diamonds and chevrons. Surprise me suggests something new each time."],
   ['#bLib', 'كل أنماطكِ هنا: افتحي نمطًا، أو ابدئي نمطًا جديدًا، أو اعملي نسخة. كل شيء يُحفظ تلقائيًا على هذا الجهاز، ويمكنكِ حفظ الأنماط في ملف كنسخة احتياطية أو لفتحها على جهاز آخر.', "All your patterns live here: open one, start a new one or make a copy. Everything saves on this device automatically, and you can save patterns to a file to back them up or open them on another device."],
-  ['#bShot', 'يصنع صورة للمخطط مع قائمة الألوان. اضغطي على الصورة مطولًا لحفظها أو إرسالها أو طباعتها.', "Makes a picture of your chart with a color key. Press and hold the picture to save, share or print it."],
+  ['#bShot', 'يصنع صورة للمخطط مع قائمة الألوان. احفظيها أو أرسليها أو اطبعيها، ويمكن فتح الصورة مرة أخرى في Bead Bench من My patterns.', "Makes a picture of your chart with a color key. Save, share or print it, and open it back into Bead Bench any time from My patterns."],
   ['#bTour', 'انتهت الجولة! اضغطي هنا متى أردتِ مشاهدتها مرة أخرى. استمتعي بالتصميم.', "That’s the tour! Tap here any time to see it again. Happy beading."]
 ];
 let tIdx = -1, tRaf = 0;
