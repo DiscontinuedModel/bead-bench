@@ -260,8 +260,13 @@ small.code{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-le
 .al-btns{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap}
 .al-btns .btn{padding:12px 18px;font-size:1rem}
 .al-btns .primary{flex:1 1 220px}
-.sheets{overflow:auto;max-height:68vh;margin-top:10px;display:grid;gap:12px;background:var(--mat);padding:12px;border-radius:10px}
-.sheets img{width:100%;max-width:640px;justify-self:center;box-shadow:0 4px 18px rgba(0,0,0,.18);border-radius:3px;background:#fff}
+.zoombar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.zoombar .pct{min-width:48px;text-align:center;font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums}
+.sheets{overflow:auto;height:68vh;margin-top:8px;background:var(--mat);padding:12px;border-radius:10px;cursor:grab;touch-action:pan-x pan-y;overscroll-behavior:contain}
+.sheets.dragging{cursor:grabbing;user-select:none}
+.sheets .pg{display:flex;flex-direction:column;align-items:center;gap:14px;width:max-content;min-width:100%}
+.sheets img{display:block;max-width:none;box-shadow:0 4px 18px rgba(0,0,0,.18);border-radius:3px;background:#fff;-webkit-user-drag:none;user-select:none}
+.sheets .pgl{font-size:.75rem;color:var(--muted);margin-top:-8px}
 </style>
 </head>
 <body>
@@ -489,9 +494,17 @@ small.code{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-le
   <p class="note">Tap each group as you pick up its beads. On a keyboard, press Space or → for the next row. The screen stays awake while this is open.</p>
 </div></div>
 
-<div class="ov" id="ovShot" hidden><div class="panel" style="width:min(900px,100%)">
+<div class="ov" id="ovShot" hidden><div class="panel" style="width:min(1100px,100%)">
   <h2>Print or share your pattern</h2>
   <p class="note" style="margin-top:0">A printable sheet with the bead graph, numbered rows, a word chart and a color key. <span id="shotInfo"></span> The PDF is best for printing. The picture of page 1 also opens back into Bead Bench from <b>My patterns → Open a saved pattern</b>.</p>
+  <div class="zoombar">
+    <button class="btn small" id="pvOut" aria-label="Zoom out">−</button>
+    <span id="pvPct" class="pct">100%</span>
+    <button class="btn small" id="pvIn" aria-label="Zoom in">+</button>
+    <button class="btn small" id="pvFit">Fit page</button>
+    <button class="btn small" id="pvWide">Fit width</button>
+    <span class="note" style="margin:0">Pinch, Ctrl + scroll, or double-tap to zoom. Drag to move around.</span>
+  </div>
   <div class="sheets" id="sheets"></div>
   <div class="close-row"><button class="btn" data-close>Close</button><button class="btn" id="bShotSave">Save picture</button><button class="btn primary" id="bShotPdf">Save PDF for printing</button></div>
 </div></div>
@@ -1315,12 +1328,12 @@ $('#bShot').onclick=async()=>{
   toast('Laying out your pattern…');
   await new Promise(r=>setTimeout(r,30));
   shotPages=buildSheets(); shotBlob=await patternPng(shotPages);
-  const box=$('#sheets'); box.innerHTML='';
-  shotPages.forEach((c,i)=>{ const im=document.createElement('img'); im.alt=`Pattern page ${i+1}`;
+  const box=$('#sheets'); box.innerHTML=''; const wrap=document.createElement('div'); wrap.className='pg'; box.appendChild(wrap);
+  shotPages.forEach((c,i)=>{ const im=document.createElement('img'); im.alt=`Pattern page ${i+1}`; im.draggable=false;
     if(i===0){ const fr=new FileReader(); fr.onload=()=>im.src=fr.result; fr.readAsDataURL(shotBlob); } else im.src=c.toDataURL('image/png');
-    box.appendChild(im); });
+    wrap.appendChild(im); if(shotPages.length>1){ const l=document.createElement('div'); l.className='pgl'; l.textContent=`Page ${i+1} of ${shotPages.length}`; wrap.appendChild(l); } });
   $('#shotInfo').textContent = `${shotPages.length} page${shotPages.length>1?'s':''}, US Letter.`;
-  show('#ovShot');
+  show('#ovShot'); requestAnimationFrame(()=>pvSet('page'));
 };
 $('#bShotSave').onclick=()=>{ if(shotBlob) download(`${slug(S.name)}.png`, shotBlob); };
 $('#bShotPdf').onclick=async()=>{
@@ -1806,6 +1819,42 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Escape') alClose();
 });
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && !$('#ovAlong').hidden && !wake){ try{ navigator.wakeLock?.request('screen').then(w=>wake=w).catch(()=>{}); }catch(e){} } });
+
+/* ---------- zoomable print preview ---------- */
+let pvW=600; // displayed page width in px
+const pvBox=$('#sheets');
+function pvApply(w, fx, fy){
+  const box=pvBox, oldW=pvW; w=Math.max(160, Math.min(3000, w));
+  if(fx==null){ fx=box.clientWidth/2; fy=box.clientHeight/2; }
+  const cx=(box.scrollLeft+fx)/oldW, cy=(box.scrollTop+fy)/oldW;
+  pvW=w; box.querySelectorAll('img').forEach(im=>im.style.width=w+'px');
+  box.scrollLeft=cx*w-fx; box.scrollTop=cy*w-fy;
+  $('#pvPct').textContent=Math.round(100*w/(SHEET.W*0.96))+'%';  // 100% ≈ printed size on a typical screen
+}
+function pvSet(mode){
+  const box=pvBox, pad=24;
+  const w = mode==='page' ? Math.min(box.clientWidth-pad, (box.clientHeight-pad)*SHEET.W/SHEET.H) : box.clientWidth-pad;
+  pvW=w; box.querySelectorAll('img').forEach(im=>im.style.width=w+'px'); box.scrollTop=0; box.scrollLeft=0;
+  $('#pvPct').textContent=Math.round(100*w/(SHEET.W*0.96))+'%';
+}
+$('#pvIn').onclick=()=>pvApply(pvW*1.25);
+$('#pvOut').onclick=()=>pvApply(pvW/1.25);
+$('#pvFit').onclick=()=>pvSet('page');
+$('#pvWide').onclick=()=>pvSet('width');
+pvBox.addEventListener('wheel',e=>{ if(!e.ctrlKey && !e.metaKey) return; e.preventDefault(); const r=pvBox.getBoundingClientRect(); pvApply(pvW*Math.exp(-e.deltaY*0.0025), e.clientX-r.left, e.clientY-r.top); },{passive:false});
+pvBox.addEventListener('dblclick',e=>{ const r=pvBox.getBoundingClientRect(); const fitW=pvBox.clientWidth-24; pvApply(pvW<fitW*1.4 ? pvW*2.2 : Math.min(fitW,(pvBox.clientHeight-24)*SHEET.W/SHEET.H), e.clientX-r.left, e.clientY-r.top); });
+// pinch on touch screens
+let pinchPV=null;
+const tdist=t=>Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
+pvBox.addEventListener('touchstart',e=>{ if(e.touches.length===2){ const r=pvBox.getBoundingClientRect(); pinchPV={d:tdist(e.touches), w:pvW, fx:(e.touches[0].clientX+e.touches[1].clientX)/2-r.left, fy:(e.touches[0].clientY+e.touches[1].clientY)/2-r.top}; } },{passive:true});
+pvBox.addEventListener('touchmove',e=>{ if(pinchPV && e.touches.length===2){ e.preventDefault(); pvApply(pinchPV.w*tdist(e.touches)/pinchPV.d, pinchPV.fx, pinchPV.fy); pinchPV.w=pvW; pinchPV.d=tdist(e.touches); } },{passive:false});
+pvBox.addEventListener('touchend',e=>{ if(e.touches.length<2) pinchPV=null; });
+// drag to pan with a mouse
+let pan=null;
+pvBox.addEventListener('pointerdown',e=>{ if(e.pointerType!=='mouse' || e.button!==0) return; pan={x:e.clientX,y:e.clientY,l:pvBox.scrollLeft,t:pvBox.scrollTop}; pvBox.classList.add('dragging'); });
+addEventListener('pointermove',e=>{ if(!pan) return; pvBox.scrollLeft=pan.l-(e.clientX-pan.x); pvBox.scrollTop=pan.t-(e.clientY-pan.y); });
+addEventListener('pointerup',()=>{ if(pan){ pan=null; pvBox.classList.remove('dragging'); } });
+addEventListener('resize',()=>{ if(!$('#ovShot').hidden) pvApply(pvW); });
 
 /* ---------- collapsible side panels ---------- */
 let folded={}; try{ folded=JSON.parse(localStorage.getItem('beadbench.folded'))||{}; }catch(e){}
