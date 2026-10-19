@@ -9,7 +9,7 @@ A bead pattern designer for bracelets, in a single HTML page.
 - **Counts and charts:** bead counts with grams, and a row-by-row chart with checkmarks
 - **Extras:** light and dark themes, and a guided tour in English with an Arabic option
 
-Patterns are saved in the browser's local storage, so each device keeps its own.
+Patterns are saved in the browser's local storage, so each device keeps its own. To back them up or move them, use **My patterns → Save all patterns** (a `.json` file) and **Open a pattern file** on the other device. Copy and paste works too.
 
 ## Run with Docker
 

@@ -228,6 +228,12 @@ select,input[type=number],input[type=text]{width:100%;background:var(--bg);borde
 .pbody{margin-top:10px}
 .left .panel.collapsed{padding-block:12px}
 #bTheme{min-width:92px}
+.libio{border-top:1px solid var(--line);margin-top:14px;padding-top:12px;display:grid;gap:8px}
+.btnrow{display:flex;flex-wrap:wrap;gap:6px}
+label.btn{display:inline-flex;align-items:center;cursor:pointer}
+#ioMore summary{cursor:pointer;font-size:.85rem;color:var(--muted)}
+#ioMore[open] summary{margin-bottom:8px}
+#ioText{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;font-family:var(--mono);font-size:.78rem;resize:vertical;color:var(--ink);margin-bottom:6px}
 </style>
 </head>
 <body>
@@ -362,7 +368,19 @@ select,input[type=number],input[type=text]{width:100%;background:var(--bg);borde
   <h2>My patterns</h2>
   <ul class="lib" id="lib"></ul>
   <div class="close-row"><button class="btn" id="bDup">Duplicate this one</button><button class="btn primary" id="bNew">New blank pattern</button><button class="btn" data-close>Close</button></div>
-  <p class="note">Patterns are saved in this browser on this device.</p>
+  <div class="libio">
+    <span class="label">Back up or move patterns</span>
+    <div class="btnrow">
+      <button class="btn small" id="bExpOne">Save this pattern to a file</button>
+      <button class="btn small" id="bExpAll">Save all patterns</button>
+      <label class="btn small" for="impFile" tabindex="0" id="impLabel">Open a pattern file</label><input type="file" id="impFile" accept=".json,application/json" hidden>
+    </div>
+    <details id="ioMore"><summary>File didn’t download? Copy and paste instead</summary>
+      <textarea id="ioText" rows="4" spellcheck="false" placeholder="Paste a pattern code here, then tap Load"></textarea>
+      <div class="btnrow"><button class="btn small" id="bCopyAll">Copy all patterns</button><button class="btn small" id="bPasteLoad">Load pasted code</button></div>
+    </details>
+  </div>
+  <p class="note">Patterns are saved in this browser on this device. Save them to a file to back them up or open them on another device.</p>
 </div></div>
 
 <div class="ov" id="ovImg" hidden><div class="panel">
@@ -1474,6 +1492,44 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', render);
 new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 document.fonts?.ready.then(render);
 
+/* ---------- export / import ---------- */
+const slug = t => (String(t).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'pattern').slice(0,40);
+function bundle(list){ return JSON.stringify({app:'bead-bench', version:1, exported:new Date().toISOString(), designs:list.map(d=>({name:d.name, stitch:d.stitch, size:d.size, cols:d.cols, rows:d.rows, palette:d.palette, cells:d.cells}))}); }
+function download(name, text){
+  try{
+    const url=URL.createObjectURL(new Blob([text],{type:'application/json'}));
+    const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+    toast(`Saved ${name}. No file? Use copy and paste below.`);
+  }catch(e){ $('#ioMore').open=true; toast('Saving files isn’t allowed here. Use copy and paste.'); }
+}
+function cleanDesign(d){
+  if(!d || typeof d!=='object') return null;
+  const cols=d.cols|0, rows=d.rows|0;
+  if(cols<2||rows<2||cols>80||rows>600||!Array.isArray(d.cells)||d.cells.length!==cols*rows) return null;
+  const pal=(Array.isArray(d.palette)?d.palette:[]).filter(p=>p && /^#[0-9a-f]{6}$/i.test(p.hex)).slice(0,LET.length)
+    .map(p=>({name:String(p.name||'Color').slice(0,60), hex:p.hex.toLowerCase()}));
+  return {id:uid(), name:String(d.name||'Imported pattern').slice(0,80), stitch:STITCH[d.stitch]?d.stitch:'loom', size:SIZES[d.size]?d.size:'d11',
+    cols, rows, palette:pal, cells:d.cells.map(v=>Number.isInteger(v)&&v>=0&&v<pal.length?v:-1), done:{}, updated:Date.now()};
+}
+function importText(t){
+  let j; try{ j=JSON.parse(String(t).trim()); }catch(e){ toast('That isn’t a Bead Bench pattern. Check you copied all of it.'); return false; }
+  const ok=(Array.isArray(j&&j.designs)? j.designs : [j]).map(cleanDesign).filter(Boolean);
+  if(!ok.length){ toast('No patterns found in that file.'); return false; }
+  ok.forEach(d=>lib.designs[d.id]=d); openDesign(ok[0].id); hide('#ovLib');
+  toast(`Opened ${ok.length} pattern${ok.length>1?'s':''}. ${ok.length>1?'Find the rest in My patterns.':''}`); return true;
+}
+$('#bExpOne').onclick=()=>download(`${slug(S.name)}.beads.json`, bundle([S]));
+$('#bExpAll').onclick=()=>download(`bead-bench-patterns-${new Date().toISOString().slice(0,10)}.json`, bundle(Object.values(lib.designs)));
+$('#impLabel').addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); $('#impFile').click(); } });
+$('#impFile').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const fr=new FileReader(); fr.onload=()=>{ importText(fr.result); e.target.value=''; }; fr.readAsText(f); };
+$('#bCopyAll').onclick=()=>{
+  const t=bundle(Object.values(lib.designs)); $('#ioText').value=t;
+  navigator.clipboard.writeText(t).then(()=>toast('All patterns copied. Paste them somewhere safe, like a note or email.'))
+    .catch(()=>{ $('#ioText').select(); toast('Selected. Copy it with your device’s Copy.'); });
+};
+$('#bPasteLoad').onclick=()=>{ if(importText($('#ioText').value)) $('#ioText').value=''; };
+
 /* ---------- collapsible side panels ---------- */
 let folded={}; try{ folded=JSON.parse(localStorage.getItem('beadbench.folded'))||{}; }catch(e){}
 document.querySelectorAll('.left .panel').forEach((p,i)=>{
@@ -1525,7 +1581,7 @@ const TOUR = [
   [panelOf('#chart'), 'المخطط صفًا بصف. مثلًا 3A تعني ثلاث خرزات من اللون A. المسي الصف عندما تنتهين منه ليُشطب، والصف التالي يظهر مميّزًا.', "The row-by-row chart. 3A means three beads of color A. Tap a row when it’s done to check it off. The next row is highlighted."],
   ['#bImg', 'حوّلي أي صورة إلى نمط خرز. اختاري عدد الألوان 8 أو 16 أو 32، وشاهدي المعاينة قبل استخدامها.', "Turn any picture into a bead pattern. Pick 8, 16 or 32 colors and check the preview before you use it."],
   ['#bGen', 'مولّد الأنماط والألوان: اختاري مجموعة ألوان متناسقة وتصميمًا مثل التدرج أو الخطوط أو المعينات أو الشيفرون، وشاهدي المعاينة. زر Surprise me يقترح تصميمًا جديدًا في كل مرة.', "The generator makes matching color palettes and designs like ombré, stripes, diamonds and chevrons. Surprise me suggests something new each time."],
-  ['#bLib', 'كل أنماطكِ هنا: افتحي نمطًا، أو ابدئي نمطًا جديدًا، أو اعملي نسخة. كل شيء يُحفظ تلقائيًا على هذا الجهاز.', "All your patterns live here: open one, start a new one or make a copy. Everything saves on this device automatically."],
+  ['#bLib', 'كل أنماطكِ هنا: افتحي نمطًا، أو ابدئي نمطًا جديدًا، أو اعملي نسخة. كل شيء يُحفظ تلقائيًا على هذا الجهاز، ويمكنكِ حفظ الأنماط في ملف كنسخة احتياطية أو لفتحها على جهاز آخر.', "All your patterns live here: open one, start a new one or make a copy. Everything saves on this device automatically, and you can save patterns to a file to back them up or open them on another device."],
   ['#bShot', 'يصنع صورة للمخطط مع قائمة الألوان. اضغطي على الصورة مطولًا لحفظها أو إرسالها أو طباعتها.', "Makes a picture of your chart with a color key. Press and hold the picture to save, share or print it."],
   ['#bTour', 'انتهت الجولة! اضغطي هنا متى أردتِ مشاهدتها مرة أخرى. استمتعي بالتصميم.', "That’s the tour! Tap here any time to see it again. Happy beading."]
 ];
