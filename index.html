@@ -234,6 +234,34 @@ label.btn{display:inline-flex;align-items:center;cursor:pointer}
 #ioMore summary{cursor:pointer;font-size:.85rem;color:var(--muted)}
 #ioMore[open] summary{margin-bottom:8px}
 #ioText{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;font-family:var(--mono);font-size:.78rem;resize:vertical;color:var(--ink);margin-bottom:6px}
+small.code{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-left:4px}
+.repeat{border:1px solid var(--accent);background:var(--accent-soft);border-radius:9px;padding:8px 10px;margin-bottom:8px;display:grid;gap:5px;font-size:.86rem}
+.repeat small{color:var(--muted)}
+.along{width:min(760px,100%)!important}
+.al-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.al-top h2{font-size:1.9rem!important;margin:2px 0 0!important}
+.al-bar{height:6px;border-radius:4px;background:var(--line);margin:12px 0;overflow:hidden}
+.al-bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.al-dir{font-size:1.05rem;font-weight:600;margin:0 0 12px}
+.al-groups{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.al-g{border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 12px;display:grid;gap:8px;min-width:96px;text-align:left;position:relative}
+.al-g:hover{border-color:var(--accent)}
+.al-g .n{font-size:2rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.al-g .n b{font-family:var(--mono);font-size:1.05rem;margin-left:6px;padding:2px 7px;border-radius:6px;vertical-align:middle}
+.al-g .nm{font-size:.8rem;color:var(--muted);max-width:160px}
+.al-g .bd{display:flex;flex-wrap:wrap;gap:3px;max-width:200px}
+.al-g .bd i{width:14px;height:18px;border-radius:5px;border:1px solid rgba(0,0,0,.18)}
+.al-g.got{opacity:.38}
+.al-g.got::after{content:"✓";position:absolute;top:6px;right:10px;font-weight:700;color:var(--accent)}
+.al-g.now{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.al-words{font-family:var(--mono);font-size:1rem;margin:0 0 10px;color:var(--ink)}
+.al-next{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.88rem;color:var(--muted);margin-bottom:14px}
+.al-next .runs{font-size:.8rem}
+.al-btns{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap}
+.al-btns .btn{padding:12px 18px;font-size:1rem}
+.al-btns .primary{flex:1 1 220px}
+.sheets{overflow:auto;max-height:68vh;margin-top:10px;display:grid;gap:12px;background:var(--mat);padding:12px;border-radius:10px}
+.sheets img{width:100%;max-width:640px;justify-self:center;box-shadow:0 4px 18px rgba(0,0,0,.18);border-radius:3px;background:#fff}
 </style>
 </head>
 <body>
@@ -246,7 +274,7 @@ label.btn{display:inline-flex;align-items:center;cursor:pointer}
     <button class="btn" id="bLib">My patterns</button>
     <button class="btn" id="bImg">Picture to pattern</button>
     <button class="btn" id="bGen">Generate</button>
-    <button class="btn primary" id="bShot">Save as picture</button>
+    <button class="btn primary" id="bShot">Print / export</button>
   </div>
 </header>
 
@@ -325,11 +353,13 @@ label.btn{display:inline-flex;align-items:center;cursor:pointer}
     <div class="panel">
       <h2>Row by row <span class="label" id="progress"></span></h2>
       <div class="chart-actions">
+        <button class="btn small primary" id="bAlong">Bead along</button>
         <button class="btn small" id="bCopy">Copy as text</button>
         <button class="btn small" id="bReset">Clear checkmarks</button>
       </div>
+      <div class="repeat" id="repeatBox" hidden></div>
       <ul class="chart" id="chart"></ul>
-      <p class="note">Tap a row when it’s done. The highlighted row is the next one to bead.</p>
+      <p class="note">Tap a row when it’s done, or use Bead along to work one row at a time with big, easy-to-read steps.</p>
     </div>
   </aside>
 
@@ -343,6 +373,8 @@ label.btn{display:inline-flex;align-items:center;cursor:pointer}
     <div class="pk-meta">
       <label class="label" for="pkName">Name</label>
       <input type="text" id="pkName" placeholder="e.g. Matte Plum">
+      <label class="label" for="pkCode">Bead number (optional)</label>
+      <input type="text" id="pkCode" placeholder="e.g. DB-0010 or 11-401" maxlength="24" spellcheck="false">
       <div class="row2">
         <div><label class="label" for="pkHex">Color code</label><input type="text" id="pkHex" maxlength="7" spellcheck="false"></div>
         <div style="display:flex;align-items:flex-end"><span class="note" id="pkNote" style="margin:0"></span></div>
@@ -443,11 +475,25 @@ label.btn{display:inline-flex;align-items:center;cursor:pointer}
   <div class="close-row"><button class="btn" data-close>Cancel</button><button class="btn" id="gColorsOnly">Use colors only</button><button class="btn primary" id="gApply">Use this pattern</button></div>
 </div></div>
 
+<div class="ov" id="ovAlong" hidden><div class="panel along" role="dialog" aria-labelledby="alTitle">
+  <div class="al-top">
+    <div><div class="label" id="alSub"></div><h2 id="alTitle">Row 1</h2></div>
+    <button class="btn" id="alClose">Close</button>
+  </div>
+  <div class="al-bar" aria-hidden="true"><i id="alBar"></i></div>
+  <p class="al-dir" id="alDir"></p>
+  <div class="al-groups" id="alGroups"></div>
+  <p class="al-words" id="alWords"></p>
+  <div class="al-next"><span class="label">Coming up</span><span id="alNext"></span></div>
+  <div class="al-btns"><button class="btn" id="alBack">← Back a row</button><button class="btn primary" id="alDone">Row done →</button></div>
+  <p class="note">Tap each group as you pick up its beads. On a keyboard, press Space or → for the next row. The screen stays awake while this is open.</p>
+</div></div>
+
 <div class="ov" id="ovShot" hidden><div class="panel" style="width:min(900px,100%)">
-  <h2>Pattern picture</h2>
-  <p class="note" style="margin-top:0">This picture shows the chart and colors, and it also opens back into Bead Bench. Use <b>My patterns → Open a saved pattern</b> on any device. You can also press and hold the picture (or right-click it) to save or share it.</p>
-  <div style="overflow:auto;max-height:70vh;margin-top:10px"><img id="shot" alt="Bead pattern chart"></div>
-  <div class="close-row"><button class="btn primary" id="bShotSave">Save picture</button><button class="btn" data-close>Close</button></div>
+  <h2>Print or share your pattern</h2>
+  <p class="note" style="margin-top:0">A printable sheet with the bead graph, numbered rows, a word chart and a color key. <span id="shotInfo"></span> The PDF is best for printing. The picture of page 1 also opens back into Bead Bench from <b>My patterns → Open a saved pattern</b>.</p>
+  <div class="sheets" id="sheets"></div>
+  <div class="close-row"><button class="btn" data-close>Close</button><button class="btn" id="bShotSave">Save picture</button><button class="btn primary" id="bShotPdf">Save PDF for printing</button></div>
 </div></div>
 
 <div id="tour" hidden>
@@ -819,9 +865,9 @@ function removeColor(i){
   S.palette.splice(i,1); if(active>=S.palette.length) active=S.palette.length-1;
   all(); save();
 }
-function addColor(name,hex){
+function addColor(name,hex,code){
   if(S.palette.length>=LET.length){ toast(`That’s ${LET.length} colors, the most a pattern can hold.`); return; }
-  S.palette.push({name,hex}); active=S.palette.length-1; noteRecent(hex,name); renderPalette(); renderStats(); save(); toast(name+' added as '+LET[active]);
+  S.palette.push(code ? {name,hex,code} : {name,hex}); active=S.palette.length-1; noteRecent(hex,name); renderPalette(); renderStats(); save(); toast(name+' added as '+LET[active]);
 }
 /* ---------- recent colors ---------- */
 let recent=[];
@@ -871,6 +917,7 @@ function openPicker(idx){
   $('#pkSearch').value='';
   const rm=$('#pkRemove'); rm.hidden = !(idx>=0 && S.palette.length>1); rm.textContent='Remove color'; delete rm.dataset.sure;
   setPk(p.hex, idx>=0 ? p.name : p.name, true);
+  $('#pkCode').value = (!isGen && idx>=0 && S.palette[idx].code) || '';
   renderPkRecent(); renderPkGroups(); show('#ovPick');
   requestAnimationFrame(drawSV);
 }
@@ -957,13 +1004,13 @@ function pkConfirm(){
   const name=(pk.name||'').trim() || `Custom ${pk.hex.toUpperCase()}`;
   if(typeof pk.mode==='string'){ G[pk.mode]=pk.hex; G[pk.mode+'n']=name; noteRecent(pk.hex,name); hide('#ovPick'); genUpdate(); return; }
   if(pk.mode>=0){
-    pushUndo(); const p=S.palette[pk.mode]; p.hex=pk.hex; p.name=name; noteRecent(pk.hex,name);
+    pushUndo(); const p=S.palette[pk.mode]; p.hex=pk.hex; p.name=name; const code=$('#pkCode').value.trim(); if(code) p.code=code; else delete p.code; noteRecent(pk.hex,name);
     hide('#ovPick'); all(); save(); toast(`${LET[pk.mode]} is now ${name}`);
   } else {
     const have=S.palette.findIndex(p=>p.hex.toLowerCase()===pk.hex);
     hide('#ovPick');
     if(have>=0){ setActive(have); toast(`${S.palette[have].name} is already ${LET[have]}, so it’s selected`); }
-    else addColor(name, pk.hex);
+    else addColor(name, pk.hex, $('#pkCode').value.trim());
   }
 }
 $('#pkOk').onclick=pkConfirm;
@@ -1018,7 +1065,7 @@ function renderStats(){
   let rows = '';
   S.palette.forEach((p,i)=>{ if(!n[i]) return;
     const g = n[i]*1.1/s.perG;
-    rows += `<tr><td><span class="dot" style="background:${p.hex}"></span><b>${LET[i]}</b> ${esc(p.name)}</td><td class="n">${n[i].toLocaleString()}</td><td class="n">${g<0.1?'<0.1':g.toFixed(1)} g</td></tr>`; });
+    rows += `<tr><td><span class="dot" style="background:${p.hex}"></span><b>${LET[i]}</b> ${esc(p.name)}${p.code?` <small class="code">${esc(p.code)}</small>`:''}</td><td class="n">${n[i].toLocaleString()}</td><td class="n">${g<0.1?'<0.1':g.toFixed(1)} g</td></tr>`; });
   $('#counts').innerHTML = rows + `<tfoot><tr><td>Total</td><td class="n">${total.toLocaleString()}</td><td class="n">${(total*1.1/s.perG).toFixed(1)} g</td></tr></tfoot>`;
   $('#gramNote').textContent = `Grams assume about ${s.perG} ${s.label} beads per gram, plus 10% extra for culls and spills.`;
 }
@@ -1055,6 +1102,8 @@ function chartRows(){
   }
   return out;
 }
+const DIRTXT={'→':'L→R','←':'R→L','○':'ring','':''};
+const DIRLONG={'→':'Work left to right','←':'Work right to left','○':'Pick up all of these and join them into a ring','':'String these beads in this order'};
 function runs(b){ const o=[]; for(const v of b){ const l=o[o.length-1]; if(l&&l.v===v) l.n++; else o.push({v,n:1}); } return o; }
 function nextRow(){
   const done=new Set(S.done[S.stitch]||[]), total = chartRows().length;
@@ -1068,12 +1117,22 @@ function renderChart(){
   rs.forEach((row,i)=>{
     const li=document.createElement('li'); li.dataset.i=i;
     if(done.has(i)) li.className='done'; else if(i===nx && done.size) li.className='next';
-    li.innerHTML = `<span class="rl">${row.label}<small>${row.dir}</small></span><span class="runs">${
+    li.innerHTML = `<span class="rl">${row.label}<small>${DIRTXT[row.dir]}</small></span><span class="runs">${
       runs(row.beads).map(r=> r.v<0 ? `<span style="color:var(--muted)"><i style="background:transparent;border-style:dashed"></i>${r.n} empty</span>` : `<span><i style="background:${S.palette[r.v].hex}"></i>${r.n}${LET[r.v]}</span>`).join('')}</span>`;
     frag.appendChild(li);
   });
   ul.appendChild(frag); ul.scrollTop=sc;
   $('#progress').textContent = `${done.size} of ${rs.length} done`;
+  const rp=stringRepeat(), box=$('#repeatBox'); box.hidden=!rp;
+  if(rp) box.innerHTML=`<b>Stringing repeat: ${rp.p} beads</b><span class="runs">${runs(rp.seq).map(r=> r.v<0?`<span>${r.n} empty</span>`:`<span><i style="background:${S.palette[r.v].hex}"></i>${r.n}${LET[r.v]}</span>`).join('')}</span><small>String it ${rp.times} times${rp.extra?`, then the first ${rp.extra} beads once more`:''}. The full list below spells out every bead.</small>`;
+  if(!$('#ovAlong').hidden) alRender();
+}
+function stringRepeat(){
+  if(S.stitch!=='crochet') return null;
+  const seq=[]; chartRows().forEach(r=>seq.push(...r.beads)); const L=seq.length;
+  if(seq.some(v=>v<0)) return null;
+  for(let p=1;p<=Math.min(100,L/3);p++){ let ok=true; for(let i=p;i<L;i++) if(seq[i]!==seq[i-p]){ ok=false; break; } if(ok) return {p, seq:seq.slice(0,p), times:Math.floor(L/p), extra:L%p}; }
+  return null;
 }
 $('#chart').onclick=e=>{
   const li=e.target.closest('li'); if(!li) return; const i=+li.dataset.i;
@@ -1084,8 +1143,9 @@ $('#bReset').onclick=()=>{ S.done[S.stitch]=[]; renderChart(); render(); save();
 function chartText(){
   const s=sz();
   let t=`${S.name}\n${STITCH[S.stitch].long} · ${s.label} · ${S.cols} ${rolled()?'around':'wide'} × ${S.rows} rows\n${rowOff()?'String the beads in this order. The first bead strung is the last one crocheted.\n':''}\nColors:\n`;
-  const n=counts(); S.palette.forEach((p,i)=>{ if(n[i]) t+=`  ${LET[i]} = ${p.name} (${n[i]} beads)\n`; });
-  t+='\n'; chartRows().forEach(r=>{ t+=`${r.label} ${r.dir}  ${runs(r.beads).map(x=> x.v<0 ? x.n+' empty' : x.n+LET[x.v]).join(', ')}\n`; });
+  const n=counts(); S.palette.forEach((p,i)=>{ if(n[i]) t+=`  ${LET[i]} = ${p.name}${p.code?' ['+p.code+']':''} (${n[i]} beads)\n`; });
+  const rp=stringRepeat(); if(rp) t+=`\nStringing repeat (${rp.p} beads): ${runs(rp.seq).map(x=>x.v<0?x.n+' empty':x.n+' '+LET[x.v]).join(', ')}\nString it ${rp.times} times${rp.extra?`, then the first ${rp.extra} beads once more`:''}.\n`;
+  t+='\nWord chart\n'; chartRows().forEach(r=>{ const n=r.beads.filter(v=>v>=0).length; t+=`${r.label}${r.dir?` (${DIRTXT[r.dir]})`:''}: ${runs(r.beads).map(x=> x.v<0 ? x.n+' empty' : x.n+' '+LET[x.v]).join(', ')}  [${n}]\n`; });
   return t;
 }
 $('#bCopy').onclick=()=>{
@@ -1097,41 +1157,139 @@ $('#bCopy').onclick=()=>{
 };
 
 /* ---------- picture export ---------- */
-function chartCanvas(){
-  const s=sz(), W=Math.max(12, Math.min(22, Math.round(560/S.cols))), H=W*s.h/s.w;
-  const g0=36, pad=28, pw=gridW(S.cols)*W, ph=gridH(S.rows)*H, legW=260, headH=74;
-  const n=counts(), used=S.palette.map((p,i)=>i).filter(i=>n[i]);
-  const legH=used.length*28+30;
-  const cvs=document.createElement('canvas'); const sc=2;
-  const w=pad+g0+pw+pad+legW+pad, h=headH+Math.max(ph,legH)+pad;
-  cvs.width=w*sc; cvs.height=h*sc; const g=cvs.getContext('2d'); g.scale(sc,sc);
-  g.fillStyle='#ffffff'; g.fillRect(0,0,w,h);
-  g.fillStyle='#1e1a2c'; g.font='22px "Young Serif", Georgia, serif'; g.textBaseline='alphabetic'; g.textAlign='left';
-  g.fillText(S.name, pad, 38);
-  g.fillStyle='#686280'; g.font='13px "Figtree", sans-serif';
-  const lmm=gridH(S.rows)*rowMM();
-  g.fillText(`${STITCH[S.stitch].long} · ${s.label} · ${S.cols} ${rolled()?'around':'wide'} × ${S.rows} rows · about ` + (rolled() ? `${(lmm/25.4).toFixed(2)}″ long, ${(S.cols*s.w/Math.PI).toFixed(1)} mm thick` : `${(S.cols*s.w/25.4).toFixed(2)}″ × ${(lmm/25.4).toFixed(2)}″`), pad, 60);
-  const ox=pad+g0, oy=headH;
-  drawPattern(g,{cells:S.cells,palette:S.palette,cols:S.cols,rows:S.rows,W,H,x:ox,y:oy,letters:W>=14,emptyCol:'#c9c4d6'});
-  g.fillStyle='#686280'; g.font='500 10px "IBM Plex Mono", monospace'; g.textAlign='right'; g.textBaseline='middle';
-  for(let r=0;r<S.rows;r++) if((r+1)%5===0||r===0) g.fillText(r+1, ox-6, oy+r*H+H/2);
-  const lx=ox+pw+pad; g.textAlign='left';
-  g.fillStyle='#1e1a2c'; g.font='600 13px "Figtree", sans-serif'; g.textBaseline='alphabetic'; g.fillText('Colors', lx, oy+12);
-  used.forEach((i,k)=>{
-    const y=oy+26+k*28; drawBead(g,lx,y,18,22,S.palette[i].hex,LET[i]);
-    g.fillStyle='#1e1a2c'; g.font='13px "Figtree", sans-serif'; g.textBaseline='middle'; g.textAlign='left';
-    g.fillText(`${S.palette[i].name}`, lx+28, y+11);
-    g.fillStyle='#686280'; g.font='12px "IBM Plex Mono", monospace'; g.textAlign='right'; g.fillText(n[i], lx+legW, y+11); g.textAlign='left';
-  });
-  return cvs;
+/* ---------- printable pattern sheets (graph + word chart + color key) ---------- */
+const SHEET={W:850,H:1100,K:2.5,M:40};   // US Letter at 100 units per inch, drawn at 250 dpi
+function wordLines(){
+  const lines=[], rs=chartRows(), rp=stringRepeat();
+  const lab = r => r.label.replace('Rows 1–2','Row 1&2').replace('Rounds 1–2','Rnd 1&2').replace('Round ','Rnd ');
+  const side={'→':' (L)','←':' (R)','○':'','':''};
+  if(rp){
+    lines.push({t:`Stringing repeat, ${rp.p} beads: ${runs(rp.seq).map(x=>`(${x.n}${LET[x.v]})`).join(', ')}`, b:true});
+    lines.push({t:`String it ${rp.times} times${rp.extra?`, then the first ${rp.extra} beads once more`:''}. Every bead is listed below.`, b:false, gap:true});
+  }
+  if(rowOff()) lines.push({t:'String in this order. The first bead strung is the last one crocheted.', b:false, gap:true});
+  rs.forEach((r,i)=> lines.push({t:`${rowOff()?'String ':''}${lab(r)}${side[r.dir]||''} ${runs(r.beads).map(x=> x.v<0 ? `(${x.n} empty)` : `(${x.n}${LET[x.v]})`).join(', ')}`, b:i%2===1}));
+  return lines;
+}
+function wrapLine(g, text, width){
+  const parts=text.split(' '), out=[]; let cur='';
+  parts.forEach(p=>{ const tryL=cur?cur+' '+p:p; if(g.measureText(tryL).width<=width || !cur) cur=tryL; else { out.push(cur); cur=p; } });
+  if(cur) out.push(cur);
+  return out;
+}
+function buildSheets(){
+  const {W,H,K,M}=SHEET, s=sz(), asp=s.h/s.w, n=counts(), used=S.palette.map((p,i)=>i).filter(i=>n[i]);
+  const total=n.reduce((a,b)=>a+b,0), lmm=gridH(S.rows)*rowMM();
+  const legRows=Math.ceil(used.length/3), legH=used.length? legRows*20+26 : 0;
+  const top1=86+legH+14, topN=70, bottom=H-44;
+  const fontW='10.5px "Figtree", system-ui, sans-serif', fontB='600 10.5px "Figtree", system-ui, sans-serif', LH=14.5;
+  // graph size: fit the whole length on page 1 when beads stay readable, otherwise continue on later pages
+  let bw=Math.min(16, 260/gridW(S.cols)), bh=bw*asp;
+  const avail1=bottom-top1;
+  if(gridH(S.rows)*bh>avail1){ const fit=avail1/gridH(S.rows); if(fit>=7.5){ bh=fit; bw=bh/asp; } else { bh=Math.max(bh*0.8,9); bw=bh/asp; } }
+  const gw=gridW(S.cols)*bw, gutter=24, gx=(W-gw)/2;
+  const pages=[]; let rowAt=0, lineAt=0; const lines=wordLines();
+  const mk=()=>{ const c=document.createElement('canvas'); c.width=W*K; c.height=H*K; const g=c.getContext('2d'); g.scale(K,K); g.fillStyle='#fff'; g.fillRect(0,0,W,H); return [c,g]; };
+  let guard=0;
+  while((rowAt<S.rows || lineAt<lines.length) && guard++<60){
+    const [c,g]=mk(), first=!pages.length, top=first?top1:topN;
+    // header
+    g.textBaseline='alphabetic'; g.textAlign='left'; g.fillStyle='#1e1a2c';
+    if(first){
+      g.font='24px "Young Serif", Georgia, serif'; g.fillText(S.name, M, 50);
+      g.font='11.5px "Figtree", system-ui, sans-serif'; g.fillStyle='#5a5470';
+      g.fillText(`${STITCH[S.stitch].long} · ${s.label} · ${S.cols} ${rolled()?'around':'wide'} × ${S.rows} ${rowOff()?'rounds':'rows'} · ${total.toLocaleString()} beads · about ${rolled()? `${(lmm/25.4).toFixed(2)}″ long, ${(S.cols*s.w/Math.PI).toFixed(1)} mm thick` : `${(S.cols*s.w/25.4).toFixed(2)}″ × ${(lmm/25.4).toFixed(2)}″`}`, M, 70);
+      // color key
+      if(used.length){
+        g.strokeStyle='#d9d5e3'; g.lineWidth=1; g.strokeRect(M, 84, W-2*M, legH-4);
+        g.font='600 9.5px "Figtree", system-ui, sans-serif'; g.fillStyle='#5a5470'; g.fillText('COLOR KEY', M+10, 99);
+        const cw3=(W-2*M-20)/3;
+        used.forEach((i,k)=>{ const x=M+10+(k%3)*cw3, y=106+Math.floor(k/3)*20, p=S.palette[i];
+          drawBead(g,x,y,13,16,p.hex,null);
+          g.fillStyle='#1e1a2c'; g.font='600 10.5px "IBM Plex Mono", monospace'; g.textBaseline='middle'; g.fillText(LET[i], x+18, y+8);
+          g.font='10.5px "Figtree", system-ui, sans-serif'; let label=p.name+(p.code?'  '+p.code:'');
+          while(g.measureText(label).width>cw3-90 && label.length>4) label=label.slice(0,-2);
+          if(label!==p.name+(p.code?'  '+p.code:'')) label=label.trim()+'…';
+          g.fillText(label, x+32, y+8);
+          g.textAlign='right'; g.fillStyle='#5a5470'; g.font='10px "IBM Plex Mono", monospace'; g.fillText(n[i].toLocaleString(), x+cw3-12, y+8); g.textAlign='left'; g.textBaseline='alphabetic';
+        });
+      }
+    } else {
+      g.font='16px "Young Serif", Georgia, serif'; g.fillText(S.name, M, 46);
+      g.font='10.5px "Figtree", system-ui, sans-serif'; g.fillStyle='#5a5470'; g.fillText(`${STITCH[S.stitch].long} · continued`, M, 62);
+    }
+    // graph chunk
+    let cols, gTop=top, rowsHere=0;
+    if(rowAt<S.rows){
+      rowsHere=Math.max(1, Math.min(S.rows-rowAt, Math.floor((bottom-top-(colOff()?bh/2:0))/bh)));
+      const sub=S.cells.slice(rowAt*S.cols,(rowAt+rowsHere)*S.cols);
+      g.save(); g.translate(0, -0); 
+      for(let r=0;r<rowsHere;r++) for(let cc=0;cc<S.cols;cc++){
+        const v=sub[r*S.cols+cc], R=rowAt+r, x=gx+bx(R,cc)*bw, y=gTop+(by(R,cc)-rowAt)*bh;
+        if(v<0) drawEmpty(g,x,y,bw,bh,'#c9c4d6'); else drawBead(g,x,y,bw,bh,S.palette[v].hex, bw>=10?LET[v]:null);
+      }
+      g.restore();
+      // row numbers down both sides
+      g.font='8.5px "IBM Plex Mono", monospace'; g.fillStyle='#5a5470'; g.textBaseline='middle';
+      const every = bh>=11 ? 1 : bh>=8 ? 2 : 5;
+      for(let r=0;r<rowsHere;r++){
+        const R=rowAt+r;
+        if(colOff()){ // peyote: left numbers sit on the high beads, right numbers on the low beads
+          const a=2*R+1, b=2*R+2;
+          const all = bh>=8;
+          if(all || (a-1)%10===0){ g.textAlign='right'; g.fillText(a, gx-5, gTop+r*bh+bh/2); }
+          if(all || b%10===0){ g.textAlign='left'; g.fillText(b, gx+gw+5, gTop+(r+.5)*bh+bh/2); }
+        } else if((R+1)%every===0||R===0){
+          g.textAlign='right'; g.fillText(R+1, gx-5, gTop+r*bh+bh/2); g.textAlign='left'; g.fillText(R+1, gx+gw+5, gTop+r*bh+bh/2);
+        }
+      }
+      if(rolled()){ g.strokeStyle='#8a5cc0'; g.setLineDash([3,3]); g.lineWidth=.8; [gx-1,gx+gw+1].forEach(x=>{ g.beginPath(); g.moveTo(x,gTop); g.lineTo(x,gTop+(rowsHere+(colOff()?.5:0))*bh); g.stroke(); }); g.setLineDash([]); }
+      rowAt+=rowsHere;
+      cols=[[M, gx-gutter-16], [gx+gw+gutter+16, W-M]];
+    } else {
+      const cw=(W-2*M-2*24)/3; cols=[0,1,2].map(k=>[M+k*(cw+24), M+k*(cw+24)+cw]);
+    }
+    // word chart columns
+    g.textAlign='left'; g.textBaseline='alphabetic';
+    for(const [x0,x1] of cols){
+      let y=top+10; const width=x1-x0;
+      if(first && x0===cols[0][0]){ g.font='600 9.5px "Figtree", system-ui, sans-serif'; g.fillStyle='#5a5470'; g.fillText('WORD CHART', x0, y); y+=LH; }
+      while(lineAt<lines.length){
+        const L=lines[lineAt]; g.font=L.b?fontB:fontW;
+        const wrapped=wrapLine(g, L.t, width), need=wrapped.length*LH+(L.gap?6:0);
+        if(y+need>bottom) break;
+        g.fillStyle='#1e1a2c';
+        wrapped.forEach((w,k)=>{ g.fillText(w, x0+(k?12:0), y); y+=LH; });
+        if(L.gap) y+=6;
+        lineAt++;
+      }
+    }
+    pages.push(c);
+  }
+  // footers
+  pages.forEach((c,i)=>{ const g=c.getContext('2d'); g.font='9.5px "Figtree", system-ui, sans-serif'; g.fillStyle='#8a849c'; g.textAlign='center'; g.textBaseline='alphabetic';
+    g.fillText(`${S.name} · page ${i+1} of ${pages.length} · made with Bead Bench`, SHEET.W/2, SHEET.H-22); });
+  return pages;
+}
+let jsPdfLoad=null;
+function loadJsPdf(){
+  if(window.jspdf) return Promise.resolve(window.jspdf);
+  return jsPdfLoad ||= new Promise((ok,no)=>{ const sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    sc.onload=()=>window.jspdf?ok(window.jspdf):no(new Error('load')); sc.onerror=()=>{ jsPdfLoad=null; no(new Error('load')); }; document.head.appendChild(sc); });
+}
+async function sheetsPdf(pages){
+  const {jsPDF}=await loadJsPdf();
+  const doc=new jsPDF({unit:'in', format:'letter', compress:true});
+  pages.forEach((c,i)=>{ if(i) doc.addPage(); doc.addImage(c.toDataURL('image/jpeg',0.92),'JPEG',0,0,8.5,11); });
+  return doc.output('blob');
 }
 /* PNG with the pattern tucked inside (a tEXt chunk), so the picture opens back into Bead Bench */
 const CRC_T=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
 function crc32(b){ let c=0xFFFFFFFF; for(let i=0;i<b.length;i++) c=CRC_T[(c^b[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
 const toB64 = str => { const u=new TextEncoder().encode(str); let s=''; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); return btoa(s); };
 const fromB64 = b => new TextDecoder().decode(Uint8Array.from(atob(b), ch=>ch.charCodeAt(0)));
-async function patternPng(){
-  const cvs=chartCanvas();
+async function patternPng(pages){
+  const cvs=(pages||buildSheets())[0];
   const blob=await new Promise(r=>cvs.toBlob(r,'image/png')), png=new Uint8Array(await blob.arrayBuffer());
   const enc=new TextEncoder(), type=enc.encode('tEXt'), data=enc.encode('bead-bench\0'+toB64(bundle([S])));
   const chunk=new Uint8Array(12+data.length), dv=new DataView(chunk.buffer);
@@ -1152,11 +1310,25 @@ function patternFromPng(buf){
   return null;
 }
 let shotBlob=null;
+let shotPages=null;
 $('#bShot').onclick=async()=>{
-  shotBlob=await patternPng();
-  const fr=new FileReader(); fr.onload=()=>{ $('#shot').src=fr.result; show('#ovShot'); }; fr.readAsDataURL(shotBlob);
+  toast('Laying out your pattern…');
+  await new Promise(r=>setTimeout(r,30));
+  shotPages=buildSheets(); shotBlob=await patternPng(shotPages);
+  const box=$('#sheets'); box.innerHTML='';
+  shotPages.forEach((c,i)=>{ const im=document.createElement('img'); im.alt=`Pattern page ${i+1}`;
+    if(i===0){ const fr=new FileReader(); fr.onload=()=>im.src=fr.result; fr.readAsDataURL(shotBlob); } else im.src=c.toDataURL('image/png');
+    box.appendChild(im); });
+  $('#shotInfo').textContent = `${shotPages.length} page${shotPages.length>1?'s':''}, US Letter.`;
+  show('#ovShot');
 };
 $('#bShotSave').onclick=()=>{ if(shotBlob) download(`${slug(S.name)}.png`, shotBlob); };
+$('#bShotPdf').onclick=async()=>{
+  if(!shotPages) return; const b=$('#bShotPdf'); b.disabled=true; b.textContent='Making PDF…';
+  try{ download(`${slug(S.name)}.pdf`, await sheetsPdf(shotPages)); }
+  catch(e){ toast('The PDF maker couldn’t load. Check your connection, or save the pictures instead.'); }
+  b.disabled=false; b.textContent='Save PDF for printing';
+};
 
 /* ---------- picture to pattern ---------- */
 let srcImg=null, imgK=16, quant=null, qTimer=0;
@@ -1542,7 +1714,7 @@ async function download(name, text){
     const url=URL.createObjectURL(text instanceof Blob ? text : new Blob([text],{type:'application/json'}));
     const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),5000);
-    toast(`Saved ${name}. No file? Use copy and paste below.`);
+    toast(`Saved ${name}`);
   }catch(e){ $('#ioMore').open=true; toast('Saving files isn’t allowed here. Use copy and paste.'); }
 }
 function cleanDesign(d){
@@ -1550,7 +1722,7 @@ function cleanDesign(d){
   const cols=d.cols|0, rows=d.rows|0;
   if(cols<2||rows<2||cols>80||rows>600||!Array.isArray(d.cells)||d.cells.length!==cols*rows) return null;
   const pal=(Array.isArray(d.palette)?d.palette:[]).filter(p=>p && /^#[0-9a-f]{6}$/i.test(p.hex)).slice(0,LET.length)
-    .map(p=>({name:String(p.name||'Color').slice(0,60), hex:p.hex.toLowerCase()}));
+    .map(p=>{ const o={name:String(p.name||'Color').slice(0,60), hex:p.hex.toLowerCase()}; if(p.code) o.code=String(p.code).slice(0,24); return o; });
   return {id:uid(), name:String(d.name||'Imported pattern').slice(0,80), stitch:STITCH[d.stitch]?d.stitch:'loom', size:SIZES[d.size]?d.size:'d11',
     cols, rows, palette:pal, cells:d.cells.map(v=>Number.isInteger(v)&&v>=0&&v<pal.length?v:-1), done:{}, updated:Date.now()};
 }
@@ -1578,6 +1750,62 @@ $('#bCopyAll').onclick=()=>{
     .catch(()=>{ $('#ioText').select(); toast('Selected. Copy it with your device’s Copy.'); });
 };
 $('#bPasteLoad').onclick=()=>{ if(importText($('#ioText').value)) $('#ioText').value=''; };
+
+/* ---------- bead along: one row at a time ---------- */
+let alRow=0, alGot=0, wake=null;
+function alOpen(){
+  const nx=nextRow(); alRow = nx>=0 ? nx : 0; alGot=0; show('#ovAlong'); alRender();
+  try{ navigator.wakeLock?.request('screen').then(w=>wake=w).catch(()=>{}); }catch(e){}
+}
+function alClose(){ hide('#ovAlong'); try{ wake?.release(); }catch(e){} wake=null; }
+function runChips(beads){ return runs(beads).map(r=> r.v<0 ? `<span>${r.n} empty</span>` : `<span><i style="background:${S.palette[r.v].hex}"></i>${r.n}${LET[r.v]}</span>`).join(''); }
+function alRender(){
+  const rs=chartRows(); if(!rs.length) return;
+  alRow=Math.max(0,Math.min(rs.length-1,alRow));
+  const row=rs[alRow], done=new Set(S.done[S.stitch]||[]), groups=runs(row.beads);
+  const unit = rowOff() ? 'beads to string' : (rolled() ? 'beads this round' : 'beads this row');
+  $('#alSub').textContent = `${alRow+1} of ${rs.length}${done.has(alRow)?' · already done':''} · ${row.beads.filter(v=>v>=0).length} ${unit}`;
+  $('#alTitle').textContent = rowOff() ? `String ${row.label.toLowerCase()}` : row.label;
+  $('#alBar').style.width = (100*done.size/rs.length)+'%';
+  let tip = DIRLONG[row.dir];
+  if(S.stitch==='peyote' && alRow===0) tip='Pick up all of these at once. They become rows 1 and 2.';
+  if(S.stitch==='peyote' && alRow>0) tip += '. Add one bead, skip one, and stitch through the next up bead.';
+  if(S.stitch==='tube' && alRow>0) tip = 'Add one bead in every other spot, then step up at the end of the round.';
+  if(S.stitch==='crochet') tip = 'The first beads you string are the last ones you crochet.';
+  $('#alDir').textContent = tip;
+  const g=$('#alGroups'); g.innerHTML='';
+  groups.forEach((r,k)=>{
+    const p=S.palette[r.v], b=document.createElement('button'); b.className='al-g'+(k<alGot?' got':'')+(k===alGot?' now':'');
+    const shown=Math.min(r.n,12);
+    b.innerHTML = r.v<0 ? `<span class="n">${r.n}</span><span class="nm">empty spots, no beads</span>`
+      : `<span class="n">${r.n}<b style="background:${p.hex};color:${lum(p.hex)>.55?'#1e1a2c':'#fff'}">${LET[r.v]}</b></span>
+         <span class="bd">${('<i style="background:'+p.hex+'"></i>').repeat(shown)}${r.n>shown?`<small>+${r.n-shown}</small>`:''}</span>
+         <span class="nm">${esc(p.name)}${p.code?' · '+esc(p.code):''}</span>`;
+    b.setAttribute('aria-label', r.v<0 ? `${r.n} empty` : `${r.n} ${p.name}`);
+    b.onclick=()=>{ alGot = k<alGot ? k : k+1; alRender(); };
+    g.appendChild(b);
+  });
+  $('#alWords').textContent = groups.map(r=> r.v<0 ? `${r.n} empty` : `${r.n} ${LET[r.v]}`).join(' · ');
+  const nx=rs[alRow+1]; $('#alNext').innerHTML = nx ? `${nx.label}<span class="runs">${runChips(nx.beads)}</span>` : 'This is the last one.';
+  $('#alBack').disabled = alRow===0;
+  $('#alDone').textContent = alRow===rs.length-1 ? 'Finish pattern ✓' : `${rowOff()?'Strung':'Row done'} →`;
+}
+$('#bAlong').onclick=alOpen;
+$('#alClose').onclick=alClose;
+$('#ovAlong').addEventListener('click',e=>{ if(e.target.id==='ovAlong') alClose(); });
+$('#alDone').onclick=()=>{
+  const rs=chartRows(), d=new Set(S.done[S.stitch]||[]); d.add(alRow); S.done[S.stitch]=[...d]; save();
+  if(alRow>=rs.length-1){ renderChart(); render(); alClose(); toast('Pattern finished. Nice work!'); return; }
+  alRow++; alGot=0; renderChart(); render(); alRender();
+};
+$('#alBack').onclick=()=>{ if(alRow===0) return; alRow--; const d=new Set(S.done[S.stitch]||[]); d.delete(alRow); S.done[S.stitch]=[...d]; alGot=0; save(); renderChart(); render(); alRender(); };
+document.addEventListener('keydown',e=>{
+  if($('#ovAlong').hidden || e.target.matches('input,textarea,select')) return;
+  if(e.key===' '||e.key==='ArrowRight'){ e.preventDefault(); $('#alDone').click(); }
+  else if(e.key==='ArrowLeft'){ e.preventDefault(); $('#alBack').click(); }
+  else if(e.key==='Escape') alClose();
+});
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && !$('#ovAlong').hidden && !wake){ try{ navigator.wakeLock?.request('screen').then(w=>wake=w).catch(()=>{}); }catch(e){} } });
 
 /* ---------- collapsible side panels ---------- */
 let folded={}; try{ folded=JSON.parse(localStorage.getItem('beadbench.folded'))||{}; }catch(e){}
@@ -1627,11 +1855,11 @@ const TOUR = [
   ['.map', 'خريطة الخرز تعرض السوار كاملًا. المربع الأبيض هو الجزء الظاهر أمامكِ. المسي الخريطة للانتقال إلى أي مكان.', "The bead map shows the whole bracelet. The white box is the part on screen. Tap the map to jump anywhere."],
   ['#rollPanel', 'في الأساور الملفوفة يظهر هنا شكل السوار وهو ملفوف كأنبوب. اسحبيه بإصبعكِ لتدويره، أو اضغطي Spin ليدور وحده. الخطان المتقطعان على جانبي النمط يلتقيان حول الأنبوب.', "For rolled bracelets, this shows the bracelet rolled into a tube. Drag to turn it, tap Spin to rotate it, and zoom with − and +. The dashed lines on the pattern meet around the tube."],
   [panelOf('#counts'), 'هنا عدد الخرز من كل لون، ووزنه التقريبي بالغرام مع زيادة احتياطية. مفيد قبل الشراء.', "Bead count shows how many beads of each color you need, with grams and a little extra. Handy before you shop."],
-  [panelOf('#chart'), 'المخطط صفًا بصف. مثلًا 3A تعني ثلاث خرزات من اللون A. المسي الصف عندما تنتهين منه ليُشطب، والصف التالي يظهر مميّزًا.', "The row-by-row chart. 3A means three beads of color A. Tap a row when it’s done to check it off. The next row is highlighted."],
+  [panelOf('#chart'), 'المخطط صفًا بصف. مثلًا 3A تعني ثلاث خرزات من اللون A. المسي الصف عندما تنتهين منه ليُشطب، أو اضغطي Bead along لتعملي صفًا واحدًا في كل مرة بخط كبير وواضح.', "The row-by-row chart. 3A means three beads of color A. Tap a row when it’s done to check it off, or tap Bead along to work one big, easy-to-read row at a time."],
   ['#bImg', 'حوّلي أي صورة إلى نمط خرز. اختاري عدد الألوان 8 أو 16 أو 32، وشاهدي المعاينة قبل استخدامها.', "Turn any picture into a bead pattern. Pick 8, 16 or 32 colors and check the preview before you use it."],
   ['#bGen', 'مولّد الأنماط والألوان: اختاري مجموعة ألوان متناسقة وتصميمًا مثل التدرج أو الخطوط أو المعينات أو الشيفرون، وشاهدي المعاينة. زر Surprise me يقترح تصميمًا جديدًا في كل مرة.', "The generator makes matching color palettes and designs like ombré, stripes, diamonds and chevrons. Surprise me suggests something new each time."],
   ['#bLib', 'كل أنماطكِ هنا: افتحي نمطًا، أو ابدئي نمطًا جديدًا، أو اعملي نسخة. كل شيء يُحفظ تلقائيًا على هذا الجهاز، ويمكنكِ حفظ الأنماط في ملف كنسخة احتياطية أو لفتحها على جهاز آخر.', "All your patterns live here: open one, start a new one or make a copy. Everything saves on this device automatically, and you can save patterns to a file to back them up or open them on another device."],
-  ['#bShot', 'يصنع صورة للمخطط مع قائمة الألوان. احفظيها أو أرسليها أو اطبعيها، ويمكن فتح الصورة مرة أخرى في Bead Bench من My patterns.', "Makes a picture of your chart with a color key. Save, share or print it, and open it back into Bead Bench any time from My patterns."],
+  ['#bShot', 'يصنع نمطًا جاهزًا للطباعة: رسم الخرز مع أرقام الصفوف، والمخطط المكتوب، ومفتاح الألوان. احفظيه PDF للطباعة، أو كصورة يمكن فتحها مرة أخرى في Bead Bench.', "Makes a printable pattern: the bead graph with numbered rows, a word chart and a color key. Save it as a PDF to print, or as a picture that opens back into Bead Bench."],
   ['#bTour', 'انتهت الجولة! اضغطي هنا متى أردتِ مشاهدتها مرة أخرى. استمتعي بالتصميم.', "That’s the tour! Tap here any time to see it again. Happy beading."]
 ];
 let tIdx = -1, tRaf = 0;
